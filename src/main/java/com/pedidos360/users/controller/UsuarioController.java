@@ -1,5 +1,7 @@
 package com.pedidos360.users.controller;
 
+import com.pedidos360.users.dto.LoginRequestDto;
+import com.pedidos360.users.dto.LoginResponseDto;
 import com.pedidos360.users.dto.UsuarioDto;
 import com.pedidos360.users.entity.Usuario;
 import com.pedidos360.users.service.UsuarioService;
@@ -34,5 +36,14 @@ public class UsuarioController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(usuarioCreado);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponseDto> login(
+            @RequestBody LoginRequestDto loginRequest) {
+
+        LoginResponseDto respuesta = usuarioService.login(loginRequest);
+
+        return ResponseEntity.ok(respuesta);
     }
 }
