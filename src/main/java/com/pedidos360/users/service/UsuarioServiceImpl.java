@@ -1,5 +1,7 @@
 package com.pedidos360.users.service;
 
+import com.pedidos360.users.dto.LoginRequestDto;
+import com.pedidos360.users.dto.LoginResponseDto;
 import com.pedidos360.users.dto.UsuarioDto;
 import com.pedidos360.users.entity.Usuario;
 import com.pedidos360.users.repository.UsuarioRepository;
@@ -11,9 +13,14 @@ import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityPr
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminAddUserToGroupRequest;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminCreateUserRequest;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminCreateUserResponse;
+import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminInitiateAuthRequest;
+import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminInitiateAuthResponse;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AttributeType;
+import software.amazon.awssdk.services.cognitoidentityprovider.model.AuthFlowType;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class UsuarioServiceImpl implements UsuarioService {
@@ -23,6 +30,9 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Value("${aws.cognito.userPoolId}")
     private String userPoolId;
+
+    @Value("${aws.cognito.clientId}")
+    private String clientId;
 
     public UsuarioServiceImpl(
             UsuarioRepository usuarioRepository,
@@ -90,5 +100,38 @@ public class UsuarioServiceImpl implements UsuarioService {
         usuario.setRol(usuarioDto.getRol());
 
         return usuarioRepository.save(usuario);
+    }
+
+    @Override
+    public LoginResponseDto login(LoginRequestDto loginRequest) {
+
+        Map<String, String> authParameters = new HashMap<>();
+
+        authParameters.put("USERNAME", loginRequest.getEmail());
+        authParameters.put("PASSWORD", loginRequest.getPassword());
+
+        AdminInitiateAuthRequest authRequest =
+                AdminInitiateAuthRequest.builder()
+                        .userPoolId(userPoolId)
+                        .clientId(clientId)
+                        .authFlow(AuthFlowType.ADMIN_USER_PASSWORD_AUTH)
+                        .authParameters(authParameters)
+                        .build();
+
+        AdminInitiateAuthResponse authResponse =
+                cognitoClient.adminInitiateAuth(authRequest);
+
+        if (authResponse.authenticationResult() == null) {
+            throw new RuntimeException(
+                    "Cognito requiere completar un desafío antes de iniciar sesión");
+        }
+
+        return new LoginResponseDto(
+                authResponse.authenticationResult().accessToken(),
+                authResponse.authenticationResult().idToken(),
+                authResponse.authenticationResult().refreshToken(),
+                authResponse.authenticationResult().expiresIn(),
+                authResponse.authenticationResult().tokenType()
+        );
     }
 }
