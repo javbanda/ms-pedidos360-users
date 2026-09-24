@@ -1,5 +1,7 @@
 package com.pedidos360.users.service;
 
+import com.pedidos360.users.dto.LoginRequestDto;
+import com.pedidos360.users.dto.LoginResponseDto;
 import com.pedidos360.users.dto.UsuarioDto;
 import com.pedidos360.users.entity.Usuario;
 
@@ -10,4 +12,6 @@ public interface UsuarioService {
     List<Usuario> listarUsuarios();
 
     Usuario crearUsuario(UsuarioDto usuarioDto);
+
+    LoginResponseDto login(LoginRequestDto loginRequest);
 }
