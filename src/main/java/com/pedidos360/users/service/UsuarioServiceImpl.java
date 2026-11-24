@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminAddUserToGroupRequest;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminCreateUserRequest;
+import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminSetUserPasswordRequest;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminCreateUserResponse;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminInitiateAuthRequest;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminInitiateAuthResponse;
@@ -62,7 +63,7 @@ public class UsuarioServiceImpl implements UsuarioService {
                                 .build(),
                         AttributeType.builder()
                                 .name("email_verified")
-                                .value("true")
+                                .value("false")
                                 .build()
                 )
                 .messageAction("SUPPRESS")
@@ -81,12 +82,22 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .orElseThrow(() ->
                         new RuntimeException("No se pudo obtener el sub de Cognito"));
 
-        // 3. Agregar usuario al grupo indicado en el DTO
+                // Establecer contrasena permanente para el inicio de sesion.
+        cognitoClient.adminSetUserPassword(
+                AdminSetUserPasswordRequest.builder()
+                        .userPoolId(userPoolId)
+                        .username(usuarioDto.getEmail())
+                        .password(usuarioDto.getPassword())
+                        .permanent(true)
+                        .build()
+        );
+
+        // Asignar siempre el rol externo, nunca uno elegido por el cliente.
         AdminAddUserToGroupRequest groupRequest =
                 AdminAddUserToGroupRequest.builder()
                         .userPoolId(userPoolId)
                         .username(usuarioDto.getEmail())
-                        .groupName(usuarioDto.getRol())
+                        .groupName("ROLE_CLIENTE")
                         .build();
 
         cognitoClient.adminAddUserToGroup(groupRequest);
@@ -97,7 +108,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         usuario.setCognitoSub(cognitoSub);
         usuario.setNombre(usuarioDto.getNombre());
         usuario.setEmail(usuarioDto.getEmail());
-        usuario.setRol(usuarioDto.getRol());
+        usuario.setRol("ROLE_CLIENTE");
 
         return usuarioRepository.save(usuario);
     }
